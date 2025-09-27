@@ -5,9 +5,13 @@
 
 import os,sys
 
+
+#I dont know how to officially find the GPS data, so Im looking for a specific byte sequence. If you know
+#the proper way, then please let me know.
+
 #magic=b'\x00\x00\x00\x00\x09\x10\x87\x02\x00'
 #magic=b'\x00\x00\x00\x00\x09\x10\x87\x02\x01'
-magic=b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x09\x10'
+magic=b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x09'
 endMagic=b'\x40'
 
 def getGpsData(fname):
@@ -21,25 +25,26 @@ def getGpsData(fname):
    chunkSize=1024*1024
    nextChunk=fileSize-chunkSize
    gpsStart=0
+   recSize=53
    while not done:
       fh.seek(nextChunk,os.SEEK_SET)
       buff=fh.read(chunkSize)
       sres=buff.find(magic)
-      if sres>=0:
-         gpsStart=sres+nextChunk+len(magic)+3
+      fh.seek(sres+nextChunk+len(magic)+4,os.SEEK_SET)
+      btest=fh.read(recSize)
+      if btest.endswith(endMagic):
+         gpsStart=sres+nextChunk+len(magic)+4
          print("Found GPS magic at " + str(gpsStart))
          done=True
       else:
          if nextChunk==0:
             print("Failed to find magic. This means I was not able to find the start of the GPS data")
             sys.exit(1)
-         nextChunk-=(chunkSize-len(magic))
+         nextChunk-=(chunkSize-(len(magic)+recSize))
          if nextChunk<0:
             nextChunk=0
-
    fh.seek(gpsStart,os.SEEK_SET)
    done=False
-   recSize=53
    records=[]
    cntr=0
    while not done:
@@ -65,10 +70,13 @@ def adjustTimes(fname,records,offset):
    fh.close()
 
 def help():
+   print()
    print("Usage: ./shiftStats.py myvid.insv -t -30");
-   print(" -h	This page.")
-   print(" -t	Time offset in seconds. Example -t -61 (This will move the GPS data back 61 seconds)")
+   print(" -h   This page.")
+   print(" -t   Time offset in seconds. Example -t -61 (This will move the GPS data back 61 seconds)")
    print(" -f   Dont prompt. Just do it")
+   print()
+   sys.exit(0)
 
 #fn="./VID_20250920_100517_00_006.insv"
 #fn="./VID_20250922_124309_00_007.insv"
@@ -78,6 +86,8 @@ force=False
 offset=0
 args=sys.argv.copy()
 args.pop(0)
+if "-h" in args:
+   help()
 if "-f" in args:
    args.remove("-q")
    force=True
@@ -108,8 +118,8 @@ else:
    print("Found "+str(len(records))+" records. Press ENTER to proceed, or CTRL+C to abort.")
    input("...")
 
-print("Adjusting times...")
-adjustTimes(fn,records,-60)
+print("Adjusting times... " + str(offset))
+#adjustTimes(fn,records,offset)
 print("Done.")
 
 
