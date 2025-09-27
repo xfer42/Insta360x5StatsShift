@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
+#Insta360 X5 GPS Time Stats shift.
+#Use this tool to shift the time on the GPS data in your insv file
+#xfer42@hotmail.com
+
 import os,sys
 
-magic=b'\x00\x00\x00\x00\x09\x10\x87\x02\x00'
+#magic=b'\x00\x00\x00\x00\x09\x10\x87\x02\x00'
 #magic=b'\x00\x00\x00\x00\x09\x10\x87\x02\x01'
 magic=b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x09\x10'
 endMagic=b'\x40'
@@ -50,7 +54,6 @@ def getGpsData(fname):
    fh.close()
    return records
 
-
 def adjustTimes(fname,records,offset):
    fh=open(fname,"rb+")
    for rec in records:
@@ -61,18 +64,53 @@ def adjustTimes(fname,records,offset):
       fh.write(bytets)
    fh.close()
 
-
-     
-      
-
-   
-   
+def help():
+   print("Usage: ./shiftStats.py myvid.insv -t -30");
+   print(" -h	This page.")
+   print(" -t	Time offset in seconds. Example -t -61 (This will move the GPS data back 61 seconds)")
+   print(" -f   Dont prompt. Just do it")
 
 #fn="./VID_20250920_100517_00_006.insv"
-fn="./VID_20250922_124309_00_007.insv"
+#fn="./VID_20250922_124309_00_007.insv"
 #fn="./new.insv"
+fn=""
+force=False
+offset=0
+args=sys.argv.copy()
+args.pop(0)
+if "-f" in args:
+   args.remove("-q")
+   force=True
+if "-t" in args:
+   try:
+      offset=int(args[args.index("-t")+1])
+   except:
+      print("Invalid offset. Enter a positive or negative number after -t")
+      sys.exit(1)
+   args.pop(args.index("-t")+1)
+   args.remove("-t")
+
+#Only support 1 file for now, but will probably support multiple later
+try:
+   fn=args[0]
+except:
+   print("Please specify a filename (.insv file).")
+   sys.exit(1)
+
+
 records=getGpsData(fn)
+print("*** WARNING ***")
+print("This will permenently modify " + fn +". I suggest you back it up.")
+if force:
+   #Do nothing
+   pass
+else:
+   print("Found "+str(len(records))+" records. Press ENTER to proceed, or CTRL+C to abort.")
+   input("...")
+
+print("Adjusting times...")
 adjustTimes(fn,records,-60)
+print("Done.")
 
 
    
