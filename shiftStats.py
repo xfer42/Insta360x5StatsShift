@@ -119,7 +119,7 @@ else:
    input("...")
 
 print("Adjusting times... " + str(offset))
-#adjustTimes(fn,records,offset)
+adjustTimes(fn,records,offset)
 print("Done.")
 
 
