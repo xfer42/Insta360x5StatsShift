@@ -14,6 +14,27 @@ import os,sys
 magic=b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x09'
 endMagic=b'\x40'
 
+
+def isValidRecord(bdat):
+   ets=bdat[:4]
+   unk1=bdat[4:8]
+   ts2=bdat[8:10]
+   unk2=bdat[10:14]
+   lat=bdat[14:18]
+   unk3=bdat[18:23]
+   long=bdat[23:27]
+   unk4=bdat[27:33]
+   speed=bdat[33:36]
+   unk5=bdat[36:40]
+   track=bdat[40:44]
+   unk6=bdat[44:48]
+   alt=bdat[48:51]
+   unk7=bdat[51:52]
+   unk8=bdat[52:53]
+   if unk1==b'\x00\x00\x00\x00' and unk8==b'\x40':
+      return True
+   return False
+   
 def getGpsData(fname):
    fh=open(fname,'rb')
    fh.seek(0,os.SEEK_END)
@@ -32,7 +53,7 @@ def getGpsData(fname):
       sres=buff.find(magic)
       fh.seek(sres+nextChunk+len(magic)+4,os.SEEK_SET)
       btest=fh.read(recSize)
-      if btest.endswith(endMagic):
+      if isValidRecord(btest):
          gpsStart=sres+nextChunk+len(magic)+4
          print("Found GPS magic at " + str(gpsStart))
          done=True
@@ -56,6 +77,8 @@ def getGpsData(fname):
          recloc=fh.tell()-recSize
          records.append({"addr":recloc,"data":tmp})
          print(str(cntr)+":"+hex(recloc)+" " + tmp.hex())
+      else:
+         print(str(cntr)+":"+hex(recloc)+" " + tmp.hex())
    fh.close()
    return records
 
@@ -63,7 +86,9 @@ def adjustTimes(fname,records,offset):
    fh=open(fname,"rb+")
    for rec in records:
       intts=int.from_bytes(rec['data'][:4],byteorder='little')
+      print(intts)
       intnts=offset+intts
+      print(intts)
       bytets=intnts.to_bytes(4,'little')
       fh.seek(rec['addr'],os.SEEK_SET)
       fh.write(bytets)
